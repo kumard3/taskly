@@ -7,41 +7,24 @@ generator client {
 
 datasource db {
     provider = "postgresql"
-    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-    // Further reading:
-    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
     url      = env("DATABASE_URL")
-}
-
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
-
-    @@index([name])
 }
 
 // Necessary for Next auth
 model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String? // @db.Text
+    access_token      String? // @db.Text
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String? // @db.Text
+    session_state     String?
+    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([provider, providerAccountId])
 }
@@ -55,14 +38,22 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
+    id            String          @id @default(cuid())
     name          String?
-    email         String?   @unique
+    email         String?         @unique
     emailVerified DateTime?
     image         String?
     accounts      Account[]
     sessions      Session[]
-    posts         Post[]
+    tasks         Task[]
+    subTasks      SubTask[]
+    comments      Comment[]
+    Team          Team?           @relation(fields: [teamId], references: [id])
+    teamId        String?
+    project       Project[]
+    taskAssigneTo TaskAssigneTo[]
+    createdAt     DateTime        @default(now())
+    updatedAt     DateTime        @updatedAt
 }
 
 model VerificationToken {
@@ -71,4 +62,109 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model Task {
+    id              String         @id @default(cuid())
+    title           String?
+    description     String?
+    assigned_to     String?
+    initials        String?
+    status          CustomStatus?  @relation(fields: [customStatusId], references: [id])
+    collaboratorIds String[]
+    createdBy       User           @relation(fields: [userId], references: [id])
+    userId          String
+    comments        Comment[]
+    duedate         DateTime?
+    dependencies    String[]
+    subTasks        SubTask[]
+    projects        String?
+    project         Project[]
+    taskAssigneTo   TaskAssigneTo? @relation(fields: [taskAssigneToId], references: [id])
+    taskAssigneToId String?
+    private         Boolean        @default(true)
+    customStatusId  String?
+    createdAt       DateTime       @default(now())
+    updatedAt       DateTime       @updatedAt
+}
+
+model CustomStatus {
+    id        String   @id @default(cuid())
+    status    String?  @default("TO_DO")
+    Task      Task[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model TaskAssigneTo {
+    id     String   @id @default(cuid())
+    user   User?    @relation(fields: [userId], references: [id])
+    userId String?
+    task   Task[]
+    taskId String[]
+}
+
+model SubTask {
+    id              String         @id @default(cuid())
+    title           String?
+    description     String?
+    assignee        String?
+    status          RequestStatus? @default(TO_DO)
+    collaboratorIds String[]
+    comments        Comment[]
+    duedate         DateTime?
+    projects        String?
+    dependencies    String[]
+    Task            Task?          @relation(fields: [taskId], references: [id])
+    taskId          String?
+    createdBy       User           @relation(fields: [userId], references: [id])
+    userId          String
+    createdAt       DateTime       @default(now())
+    updatedAt       DateTime       @updatedAt
+}
+
+model Assignee {
+    id   String  @id @unique @default(cuid())
+    // task   Task?   @relation(fields: [taskId], references: [id])
+    // taskId String?
+    name String?
+}
+
+model Comment {
+    id           String   @id @default(cuid())
+    content      String?
+    Task         Task?    @relation(fields: [taskId], references: [id])
+    taskId       String?
+    SubTask      SubTask? @relation(fields: [subTaskId], references: [id])
+    subTaskId    String?
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    userInitials String?
+    user         User     @relation(fields: [userId], references: [id])
+    userId       String
+}
+
+model Project {
+    id     String  @id @default(cuid())
+    name   String?
+    team   Team?   @relation(fields: [teamId], references: [id])
+    teamId String?
+    tasks  Task[]
+    User   User?   @relation(fields: [userId], references: [id])
+    userId String?
+}
+
+model Team {
+    id       String    @id @default(cuid())
+    teamName String
+    members  User[]
+    projects Project[]
+}
+
+enum RequestStatus {
+    TO_DO
+    IN_PROGRESS
+    ISSUES
+    COMPLETED
+    OVERDUE
 }
