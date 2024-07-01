@@ -1,29 +1,66 @@
-# Create T3 App
+# Taskly
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+Taskly is an open-source project management tool designed to streamline your workflow by importing tasks and projects from various popular applications.
 
-## What's next? How do I make an app with this?
+## 🚀 Tech Stack
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+Taskly is built using the T3 Stack, offering a robust and modern development experience:
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
-
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
+- [Next.js](https://nextjs.org) with App Router
 - [tRPC](https://trpc.io)
+- [Prisma](https://www.prisma.io)
+- [Tailwind CSS](https://tailwindcss.com)
+- [TypeScript](https://www.typescriptlang.org)
 
-## Learn More
+## 🛠 Getting Started
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+### Prerequisites
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+- Node.js (v14 or later)
+- pnpm (v6 or later)
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+### Installation
 
-## How do I deploy this?
+1. Clone the repository:
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+   ```bash
+   git clone https://github.com/kumard3/taskly.git
+   cd taskly
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+3. Set up your environment variables:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit the `.env` file with your specific configuration.
+
+4. Run the development server:
+
+   ```bash
+   pnpm dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
+
+
+## 📜 License
+
+Taskly is open-source software licensed under the [MIT license](LICENSE).
+
+## 🙏 Acknowledgements
+
+- [T3 Stack](https://create.t3.gg/)
+- [Vercel](https://vercel.com) for their amazing hosting and development experience
+- All the amazing open-source projects that make Taskly possible
+
+---
+
+Built with ❤️ by kumard3
