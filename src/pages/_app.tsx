@@ -6,6 +6,7 @@ import { type AppType } from "next/app";
 import { api } from "@/utils/api";
 
 import "@/styles/globals.css";
+import Head from "next/head";
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -13,6 +14,10 @@ const MyApp: AppType<{ session: Session | null }> = ({
 }) => {
   return (
     <SessionProvider session={session}>
+      <Head>
+        <title>Taskly - Modern Project Management Tool</title>
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
       <main className={GeistSans.className}>
         <Component {...pageProps} />
       </main>
