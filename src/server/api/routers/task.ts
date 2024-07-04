@@ -58,7 +58,6 @@ export const taskRouter = createTRPCRouter({
         },
       });
 
-      
       return {
         task,
       };
@@ -121,7 +120,7 @@ export const taskRouter = createTRPCRouter({
 
   getSingleTask: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       if (!ctx.session.user.id)
         throw new TRPCClientError("User not found! Please log in.");
       const task = await ctx.db.task.findUnique({
@@ -131,6 +130,15 @@ export const taskRouter = createTRPCRouter({
         include: {
           project: true,
           subTasks: true,
+        },
+      });
+      const comments = await ctx.db.comment.findMany({
+        where: {
+          taskId: input.id,
+        },
+        select: {
+          message: true,
+          id: true,
         },
       });
       if (!task) throw new TRPCClientError("No task found");
@@ -172,6 +180,7 @@ export const taskRouter = createTRPCRouter({
         ...task,
         collaborators: collaborators,
         assigned_to: null,
+        comments: comments,
       };
     }),
 
@@ -312,13 +321,11 @@ export const taskRouter = createTRPCRouter({
       if (userData?.name === null) {
         throw new TRPCClientError("No user found");
       }
-      const initials = userData?.name;
 
       return await ctx.db.comment.create({
         data: {
-          content: input.comment,
+          message: input.comment,
           taskId: input.taskId,
-          userInitials: initials,
           userId: ctx.session.user.id,
         },
       });
@@ -370,7 +377,7 @@ export const taskRouter = createTRPCRouter({
     return tasks;
   }),
 
-  getAllTasks: protectedProcedure.mutation(async ({ ctx }) => {
+  getAllTasks: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.session.user.id)
       throw new TRPCClientError("User not found! Please log in.");
     const tasks = await ctx.db.task.findMany({

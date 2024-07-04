@@ -8,16 +8,22 @@ export const statusRouter = createTRPCRouter({
     if (!ctx.session.user.id) {
       throw new TRPCClientError("User not found! Please log in.");
     }
-    const status = await ctx.db.customStatus.findMany({
+    const status = await ctx.db.customStatus.findUnique({
       where: {
         userId: ctx.session.user.id,
       },
       select: {
         status: true,
-        id: true,
       },
     });
-    return status;
+
+    const projectStatus = status?.status.map((n) => {
+      return {
+        label: n?.replaceAll("_", " "),
+        value: n,
+      };
+    });
+    return projectStatus;
   }),
   createStatus: protectedProcedure
     .input(
@@ -29,12 +35,27 @@ export const statusRouter = createTRPCRouter({
       if (!ctx.session.user.id) {
         throw new TRPCClientError("User not found! Please log in.");
       }
-      return await ctx.db.customStatus.create({
-        data: {
-          status: input.status,
+      const prev = await ctx.db.customStatus.findUnique({
+        where: {
           userId: ctx.session.user.id,
         },
+        select: {
+          status: true,
+        },
       });
+
+      if (prev) {
+        await ctx.db.customStatus.create({
+          data: {
+            userId: ctx.session.user.id,
+
+            status: {
+              set: [...prev?.status, input.status.replaceAll(" ", "_")],
+            },
+          },
+        });
+        return "Status added successfully.";
+      }
     }),
   deleteStatus: protectedProcedure
     .input(
@@ -53,26 +74,5 @@ export const statusRouter = createTRPCRouter({
       });
     }),
 
-  updateStatus: protectedProcedure
-    .input(
-      z.object({
-        statusId: z.string(),
-        status: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id) {
-        throw new TRPCClientError("User not found! Please log in.");
-      }
-      return await ctx.db.customStatus.update({
-        where: {
-          id: input.statusId,
-        },
-        data: {
-          status: input.status,
-        },
-      });
-    }),
 
-    
 });

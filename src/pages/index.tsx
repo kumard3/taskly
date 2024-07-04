@@ -1,6 +1,8 @@
 import React from "react";
 import Head from "next/head";
 import { FaGithub } from "react-icons/fa";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -32,6 +34,10 @@ export default function Home() {
             Taskly. Discover the power of efficient project management today.
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row">
+            <Link href="/auth/login">
+              <Button>Get Started</Button>
+            </Link>
+
             <a
               href="https://github.com/kumard3/taskly"
               target="_blank"
@@ -43,17 +49,6 @@ export default function Home() {
             </a>
           </div>
         </div>
-        {/* 
-        <div className="mt-16 text-center">
-          <p className="text-sm text-gray-400 mb-4">Trusted by the largest project management teams.</p>
-          <div className="flex justify-center space-x-8">
-            <div className="w-24 h-8 bg-white/10 rounded"></div>
-            <div className="w-24 h-8 bg-white/10 rounded"></div>
-            <div className="w-24 h-8 bg-white/10 rounded"></div>
-            <div className="w-24 h-8 bg-white/10 rounded"></div>
-            <div className="w-24 h-8 bg-white/10 rounded"></div>
-          </div>
-        </div> */}
       </main>
     </div>
   );

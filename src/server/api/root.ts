@@ -5,6 +5,7 @@ import { userRouter } from "./routers/user";
 import { teamRouter } from "./routers/team";
 import { projectRouter } from "./routers/project";
 import { statusRouter } from "./routers/status";
+import { commentRouter } from "./routers/comments";
 
 export const appRouter = createTRPCRouter({
   task: taskRouter,
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   team: teamRouter,
   project: projectRouter,
   status: statusRouter,
+  comment:commentRouter
 });
 
 // export type definition of API
