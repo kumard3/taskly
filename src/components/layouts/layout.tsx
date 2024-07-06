@@ -1,31 +1,12 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Inbox,
-  CircleDot,
-  Layers,
-  FolderKanban,
-  Users,
-  Calendar,
-  UserPlus,
-  GitBranch,
-  Github,
-  LucideIcon,
-  Home,
-  CheckCircle,
-  CheckCheckIcon,
-  CheckCircle2Icon,
-} from "lucide-react";
 
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { CheckCircle2Icon, LucideIcon, Home } from "lucide-react";
+
+import { TbEdit } from "react-icons/tb";
+
 import { cn } from "@/lib/utils";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +14,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { Avatar } from "@mantine/core";
 
 interface NavProps {
   isCollapsed: boolean;
@@ -50,73 +33,63 @@ interface LayoutProps {
 }
 
 export function HybridLayout({ children }: LayoutProps) {
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const session = useSession();
+
   return (
     <div className="flex h-screen bg-background font-sans text-white">
       <TooltipProvider>
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="h-full min-h-1 items-stretch"
-        >
-          <ResizablePanel
-            defaultSize={200}
-            collapsedSize={4}
-            collapsible={true}
-            minSize={10}
-            maxSize={14}
-            onCollapse={() => setIsCollapsed(true)}
-            onExpand={() => setIsCollapsed(false)}
-            className={cn(
-              isCollapsed &&
-                "w-full min-w-[50px] max-w-48 transition-all duration-300 ease-in-out",
-            )}
-          >
-            <aside className="h-full p-4 hover:border-r hover:border-gray-800">
-              <div className="mb-6 flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-md bg-purple-600"></div>
-                <span className="text-sm font-semibold">Workspace</span>
-              </div>
-
-              <Nav
-                isCollapsed={isCollapsed}
-                links={[
-                  {
-                    title: "Home",
-                    icon: Home,
-                    variant: "default",
-                    href: "/dashboard/",
-                  },
-                  {
-                    title: "My Task",
-                    icon: CheckCircle2Icon,
-                    variant: "ghost",
-                    href: "/dashboard/home",
-                  },
-                  // {
-                  //   title: "Projects",
-                  //   label: "",
-                  //   icon: FolderKanban,
-                  //   variant: "ghost",
-                  //   href: "/dashboard/inbox",
-                  // },
-                  // {
-                  //   title: "Teams",
-                  //   label: "23",
-                  //   icon: Users,
-                  //   variant: "ghost",
-                  //   href: "/dashboard/inbox",
-                  // },
-                ]}
-              />
-            </aside>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel className=" " minSize={30} defaultSize={445}>
-            <div>
-              <main className="flex flex-1 flex-col  ">{children}</main>
+        <aside className="h-full w-52 p-2">
+          <div className=" mb-6 flex items-center justify-between space-x-1">
+            <div className=" flex items-center space-x-2">
+              <Avatar size={25} src={session.data?.user.image} />
+              <span className="text-xs font-semibold text-white">
+                {session.data?.user.name}
+              </span>
             </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            <div>
+              <Button variant="ghost" className="h-auto w-auto  p-0">
+                <TbEdit />
+              </Button>
+            </div>
+          </div>
+
+          <Nav
+            isCollapsed={false}
+            links={[
+              {
+                title: "Home",
+                icon: Home,
+                variant: "default",
+                href: "/dashboard/",
+              },
+              {
+                title: "My Task",
+                icon: CheckCircle2Icon,
+                variant: "ghost",
+                href: "/dashboard/home",
+              },
+              // {
+              //   title: "Projects",
+              //   label: "",
+              //   icon: FolderKanban,
+              //   variant: "ghost",
+              //   href: "/dashboard/inbox",
+              // },
+              // {
+              //   title: "Teams",
+              //   label: "23",
+              //   icon: Users,
+              //   variant: "ghost",
+              //   href: "/dashboard/inbox",
+              // },
+            ]}
+          />
+        </aside>
+        <div className="flex h-full w-full   flex-1 flex-col  ">
+          <main className="relative mb-2 ml-0 mr-2 mt-2 flex flex-1 flex-col  items-stretch overflow-auto rounded border bg-secondary ">
+            {children}
+          </main>
+        </div>
       </TooltipProvider>
     </div>
   );
