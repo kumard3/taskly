@@ -8,14 +8,7 @@ import { CardHeader, CardTitle, CardContent, Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useClickOutside, useDisclosure } from "@mantine/hooks";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Chip,
-  Modal,
-  MultiSelect,
-  Tabs,
-  TextInput,
-  Tooltip,
-} from "@mantine/core";
+import { Tabs, Tooltip } from "@mantine/core";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trash2 } from "lucide-react";
 import {

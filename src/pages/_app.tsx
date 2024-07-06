@@ -12,6 +12,7 @@ import Head from "next/head";
 import { MantineProvider } from "@mantine/core";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
+import MantineThemeProvider from "@/components/theme/mantine-theme";
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -24,21 +25,21 @@ const MyApp: AppType<{ session: Session | null }> = ({
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <SessionProvider session={session}>
-        <MantineProvider defaultColorScheme="dark">
-          <>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              enableSystem
-              disableTransitionOnChange
-            >
+        <>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <MantineThemeProvider>
               <main className={GeistSans.className}>
                 <Component {...pageProps} />
               </main>
-            </ThemeProvider>
-          </>
-          <Toaster />
-        </MantineProvider>
+            </MantineThemeProvider>
+          </ThemeProvider>
+        </>
+        <Toaster />
       </SessionProvider>
     </div>
   );

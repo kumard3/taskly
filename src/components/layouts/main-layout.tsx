@@ -7,14 +7,33 @@ import {
   Modal,
   Skeleton,
 } from "@mantine/core";
-import { Button, buttonVariants } from "../ui/button";
+import { buttonVariants } from "../ui/button";
 import { useState, type ReactNode } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { ScrollArea } from "../ui/scroll-area";
 import { cn, hashStringToColorHex } from "@/lib/utils";
-import { Bell, CalendarDays, CheckCircle2, Home, Plus } from "lucide-react";
+import { CalendarDays, CheckCircle2, Home } from "lucide-react";
 import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Inbox,
+  CircleDot,
+  Layers,
+  FolderKanban,
+  Users,
+  Calendar,
+  UserPlus,
+  GitBranch,
+  Github,
+  Search,
+  Bell,
+  Filter,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 
 import {
   DropdownMenuItem,
@@ -30,6 +49,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Separator } from "../ui/separator";
 
 const iconStyles = "mr-2 h-4 w-4";
 
@@ -166,7 +186,7 @@ export function MainLayout({
           </AppShell.Header>
           <AppShell.Navbar p="xs" className="bg-card text-card-foreground ">
             <>
-              <div className="space-y-4 py-4">
+              {/* <div className="space-y-4 py-4">
                 <div className="py-2">
                   <div className="space-y-1">
                     <Link
@@ -267,7 +287,48 @@ export function MainLayout({
                     </div>
                   </ScrollArea>
                 </div>
-              </div>
+              </div> */}
+
+              <aside className="w-64 border-r border-border p-4">
+                <div className="mb-6 flex items-center space-x-2">
+                  <div className="h-8 w-8 rounded-md bg-primary"></div>
+                  <span className="font-semibold">Kumard3</span>
+                </div>
+                <nav className="space-y-2">
+                  {[
+                    { icon: Inbox, label: "Inbox" },
+                    { icon: CircleDot, label: "My issues" },
+                    { icon: Layers, label: "Initiatives" },
+                    { icon: FolderKanban, label: "Projects" },
+                    { icon: Users, label: "Teams" },
+                  ].map((item, index) => (
+                    <Button
+                      key={index}
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  ))}
+                  <Separator className="my-4" />
+                  {[
+                    { icon: Calendar, label: "Cycles" },
+                    { icon: UserPlus, label: "Invite people" },
+                    { icon: GitBranch, label: "Try" },
+                    { icon: Github, label: "Link GitHub" },
+                  ].map((item, index) => (
+                    <Button
+                      key={index}
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  ))}
+                </nav>
+              </aside>
             </>
           </AppShell.Navbar>
           <AppShell.Main className="bg-card text-card-foreground">
