@@ -1,6 +1,6 @@
 import React from "react";
 
-import { CheckCircle2Icon, LucideIcon, Home } from "lucide-react";
+import { CheckCircle2Icon, type LucideIcon, Home } from "lucide-react";
 
 import { TbEdit } from "react-icons/tb";
 

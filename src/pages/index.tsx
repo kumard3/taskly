@@ -1,5 +1,4 @@
 import React from "react";
-import Head from "next/head";
 import { FaGithub } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

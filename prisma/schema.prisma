@@ -38,10 +38,25 @@ model Session {
 }
 
 model Workspace {
-    id       String    @id @default(cuid())
-    name     String?
-    members  User[]
-    projects Project[]
+    id         String       @id @default(cuid())
+    name       String?
+    projects   Project[]
+    Membership Membership[]
+    createdAt  DateTime     @default(now())
+    updatedAt  DateTime     @updatedAt
+}
+
+model Membership {
+    id          String     @id @default(cuid())
+    user        User?      @relation(fields: [userId], references: [id])
+    userId      String?
+    workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+    workspaceId String?
+    role        String?    @default("MEMBER")
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+
+    @@unique([userId, workspaceId])
 }
 
 model User {
@@ -54,16 +69,15 @@ model User {
     status        CustomStatus[]
     sessions      Session[]
     tasks         Task[]
-    subTasks      SubTask[]
     comments      Comment[]
+    password      String?
     Team          Team?           @relation(fields: [teamId], references: [id])
     teamId        String?
     project       Project[]
     taskAssigneTo TaskAssigneTo[]
+    Membership    Membership[]
     createdAt     DateTime        @default(now())
     updatedAt     DateTime        @updatedAt
-    Workspace     Workspace?      @relation(fields: [workspaceId], references: [id])
-    workspaceId   String?
 }
 
 model VerificationToken {
@@ -75,29 +89,51 @@ model VerificationToken {
 }
 
 model Task {
-    id              String         @id @default(cuid())
-    title           String?
-    description     String?
-    assigned_to     String?
-    initials        String?
-    status          String?        @default("TO_DO")
-    collaboratorIds String[]
-    comments        Comment[]
-    duedate         DateTime?
-    dependencies    String[]
-    subTasks        SubTask[]
-    projects        String?
-    project         Project[]
-    taskAssigneTo   TaskAssigneTo? @relation(fields: [taskAssigneToId], references: [id])
-    taskAssigneToId String?
-    assignee        Assignee[]
-    createdBy       User?          @relation(fields: [userId], references: [id])
-    userId          String?
-    private         Boolean        @default(true)
+    id            String       @id @default(cuid())
+    title         String
+    description   String?
+    priority      String?
+    notes         String?
+    dueDate       String?
+    assigned_to   String?
+    status        String?      @default("TO_DO")
+    Comments      Comment[]
+    Attachment    FileUpload[]
+    createdBy     String?
+    collaborators String[]
+
+    projects     String?
+    project      Project[]
+    // Hierarchical structure
+    parentTask   Task?     @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+    parentTaskId String?
+    subTasks     Task[]    @relation("TaskHierarchy")
+
+    // Dependencies
+    dependenciesAsDependentTask  Dependency[] @relation("DependentTask")
+    dependenciesAsDependencyTask Dependency[] @relation("DependencyTask")
+
     createdAt       DateTime       @default(now())
     updatedAt       DateTime       @updatedAt
+    User            User?          @relation(fields: [userId], references: [id])
+    userId          String?
+    TaskAssigneTo   TaskAssigneTo? @relation(fields: [taskAssigneToId], references: [id])
+    taskAssigneToId String?
+    Assignee        Assignee[]
 
-    @@index([id])
+    @@index([id], name: "task_id_index")
+}
+
+model Dependency {
+    id               String   @id @default(cuid())
+    dependentTask    Task?    @relation("DependentTask", fields: [dependentTaskId], references: [id], onDelete: Cascade)
+    dependentTaskId  String?
+    dependencyTask   Task?    @relation("DependencyTask", fields: [dependencyTaskId], references: [id], onDelete: Cascade)
+    dependencyTaskId String?
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    @@unique([dependentTaskId, dependencyTaskId])
 }
 
 model CustomStatus {
@@ -120,25 +156,6 @@ model TaskAssigneTo {
     taskId String[]
 }
 
-model SubTask {
-    id              String    @id @default(cuid())
-    title           String?
-    description     String?
-    assignee        String?
-    status          String?   @default("TO_DO")
-    collaboratorIds String[]
-    comments        Comment[]
-    duedate         DateTime?
-    projects        String?
-    dependencies    String[]
-    Task            Task?     @relation(fields: [taskId], references: [id])
-    taskId          String?
-    createdBy       User      @relation(fields: [userId], references: [id])
-    userId          String
-    createdAt       DateTime  @default(now())
-    updatedAt       DateTime  @updatedAt
-}
-
 model Assignee {
     id     String  @id @unique @default(cuid())
     task   Task?   @relation(fields: [taskId], references: [id])
@@ -148,17 +165,16 @@ model Assignee {
 }
 
 model Comment {
-    id        String       @id @default(cuid())
-    message   String?
-    file      FileUpload[]
-    task      Task?        @relation(fields: [taskId], references: [id])
-    taskId    String?
-    subTask   SubTask?     @relation(fields: [subTaskId], references: [id])
-    subTaskId String?
-    user      User?        @relation(fields: [userId], references: [id])
+    id      String       @id @default(cuid())
+    message String?
+    file    FileUpload[]
+    task    Task?        @relation(fields: [taskId], references: [id])
+    taskId  String?
+
+    user      User?    @relation(fields: [userId], references: [id])
     userId    String?
-    createdAt DateTime     @default(now())
-    updatedAt DateTime     @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model FileUpload {
@@ -170,6 +186,8 @@ model FileUpload {
     updatedAt DateTime @updatedAt
     Comment   Comment? @relation(fields: [commentId], references: [id])
     commentId String?
+    Task      Task?    @relation(fields: [taskId], references: [id])
+    taskId    String?
 }
 
 model Project {

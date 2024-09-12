@@ -1,5 +1,3 @@
-import Image from "next/image";
-import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -12,9 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaGithub, FaGoogle } from "react-icons/fa";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 
 export default function Dashboard() {
+  const router = useRouter();
+  const session = useSession();
+  useEffect(() => {
+    if (session.status === "authenticated") {
+      void router.push("/dashboard");
+    }
+  }, [router, session.status]);
   return (
     <div className="relative flex h-screen items-center justify-center overflow-hidden">
       <div className="relative z-10 flex h-full items-center justify-center py-12">

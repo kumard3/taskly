@@ -169,6 +169,8 @@ export const taskRouter = createTRPCRouter({
         return {
           ...task,
           collaborators: collaborators,
+          comments: comments,
+
           assigned_to: {
             id: assignedToUser.id,
             image: assignedToUser.image,
