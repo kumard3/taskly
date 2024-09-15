@@ -1,32 +1,32 @@
-import { AppShell, Loader, Modal } from "@mantine/core";
-import { type ReactNode } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { AppShell, Loader, Modal } from '@mantine/core'
+import { signIn, useSession } from 'next-auth/react'
+import type { ReactNode } from 'react'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
-  Inbox,
-  CircleDot,
-  Layers,
-  FolderKanban,
-  Users,
   Calendar,
-  UserPlus,
+  CircleDot,
+  FolderKanban,
   GitBranch,
   Github,
-} from "lucide-react";
+  Inbox,
+  Layers,
+  UserPlus,
+  Users,
+} from 'lucide-react'
 
-import { Separator } from "../ui/separator";
+import { Separator } from '../ui/separator'
 
 export function MainLayout({
   children,
 }: {
-  children: ReactNode;
-  className?: string;
+  children: ReactNode
+  className?: string
 }) {
-  const { status } = useSession();
+  const { status } = useSession()
 
-  if (status === "unauthenticated") {
-    void signIn();
+  if (status === 'unauthenticated') {
+    void signIn()
     return (
       <div className="flex h-screen w-screen items-center justify-center">
         <div className="flex flex-col items-center justify-center">
@@ -36,16 +36,16 @@ export function MainLayout({
           <Loader />
         </div>
       </div>
-    );
+    )
   }
 
-  if (status === "authenticated") {
+  if (status === 'authenticated') {
     return (
       <>
         <AppShell
           navbar={{
             width: 250,
-            breakpoint: "sm",
+            breakpoint: 'sm',
           }}
           padding="md"
         >
@@ -58,11 +58,11 @@ export function MainLayout({
                 </div>
                 <nav className="space-y-2">
                   {[
-                    { icon: Inbox, label: "Inbox" },
-                    { icon: CircleDot, label: "My issues" },
-                    { icon: Layers, label: "Initiatives" },
-                    { icon: FolderKanban, label: "Projects" },
-                    { icon: Users, label: "Teams" },
+                    { icon: Inbox, label: 'Inbox' },
+                    { icon: CircleDot, label: 'My issues' },
+                    { icon: Layers, label: 'Initiatives' },
+                    { icon: FolderKanban, label: 'Projects' },
+                    { icon: Users, label: 'Teams' },
                   ].map((item, index) => (
                     <Button
                       key={index}
@@ -75,10 +75,10 @@ export function MainLayout({
                   ))}
                   <Separator className="my-4" />
                   {[
-                    { icon: Calendar, label: "Cycles" },
-                    { icon: UserPlus, label: "Invite people" },
-                    { icon: GitBranch, label: "Try" },
-                    { icon: Github, label: "Link GitHub" },
+                    { icon: Calendar, label: 'Cycles' },
+                    { icon: UserPlus, label: 'Invite people' },
+                    { icon: GitBranch, label: 'Try' },
+                    { icon: Github, label: 'Link GitHub' },
                   ].map((item, index) => (
                     <Button
                       key={index}
@@ -98,6 +98,6 @@ export function MainLayout({
           </AppShell.Main>
         </AppShell>
       </>
-    );
+    )
   }
 }
