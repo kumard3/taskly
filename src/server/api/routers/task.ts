@@ -1,307 +1,367 @@
-import { TRPCClientError } from "@trpc/client";
-import { z } from "zod";
-
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
+import {
+  type IPAllTaskData,
+  createProjectFromValue,
+  updateProjectValue,
+} from '@/types/projects'
+import { TRPCClientError } from '@trpc/client'
+import { z } from 'zod'
 
 export const taskRouter = createTRPCRouter({
-  createTask: protectedProcedure
+  getAllTasks: protectedProcedure
     .input(
       z.object({
-        title: z.string().optional(),
-        description: z.string().optional(),
-        status: z
-          .enum(["TO_DO", "IN_PROGRESS", "ISSUES", "COMPLETED", "OVERDUE"])
-          .optional(),
+        workSpaceId: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      return await ctx.db.task.create({
-        data: {
-          title: input.title,
-          description: input.description,
-          status: input.status,
-          createdBy: {
-            connect: {
-              id: ctx.session.user.id,
-            },
-          },
-          assigned_to: ctx.session.user.id,
-          collaboratorIds: {
-            set: [ctx.session.user.id],
-          },
-        },
-      });
-    }),
-
-  updateStatus: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        status: z.enum([
-          "TO_DO",
-          "IN_PROGRESS",
-          "ISSUES",
-          "COMPLETED",
-          "OVERDUE",
-        ]),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const task = await ctx.db.task.update({
-        where: {
-          id: input.id,
-        },
-        data: {
-          status: input.status,
-        },
-      });
-
-      return {
-        task,
-      };
-    }),
-
-  getAllTodoTasks: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.session.user.id)
-      throw new TRPCClientError("User not found! Please log in.");
-    const tasks = await ctx.db.task.findMany({
-      where: {
-        assigned_to: ctx.session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    const todoTasks = tasks.filter((task) => task.status !== "COMPLETED");
-    return todoTasks;
-  }),
-  getAllCompletedTasks: protectedProcedure
-    .input(z.object({ limit: z.number() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      const take = 5 + input.limit;
+      const taskData: IPAllTaskData[] = []
+
       const tasks = await ctx.db.task.findMany({
         where: {
-          createdBy: {
-            id: ctx.session.user.id,
+          id: ctx.session.user.id,
+          parentTaskId: null,
+          AND: [
+            {
+              workSpaceId: input.workSpaceId,
+            },
+          ],
+        },
+        select: {
+          id: true,
+          title: true,
+          dueDate: true,
+          priority: true,
+          status: true,
+          assignedTo: true,
+          parentTaskId: true,
+          collaborators: true,
+          createdAt: true,
+          description: true,
+          comments: true,
+
+          attachments: {
+            select: {
+              id: true,
+              name: true,
+              url: true,
+              type: true,
+            },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: take,
-      });
-      const completedTasks = tasks.filter(
-        (task) => task.status === "COMPLETED",
-      );
-
-      return completedTasks;
-    }),
-  getAllOverdueTasks: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.session.user.id)
-      throw new TRPCClientError("User not found! Please log in.");
-    const tasks = await ctx.db.task.findMany({
-      where: {
-        assigned_to: ctx.session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    if (!tasks) throw new TRPCClientError("No tasks found");
-    const overdueTasks = tasks.filter((task) => task.status === "OVERDUE");
-
-    return overdueTasks;
-  }),
-
-  getSingleTask: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      const task = await ctx.db.task.findUnique({
-        where: {
-          id: input.id,
-        },
-        include: {
-          project: true,
+          workSpaceId: true,
           subTasks: true,
+          columnPosition: true,
+          createdById: true,
+          projectId: true,
         },
-      });
-      const comments = await ctx.db.comment.findMany({
-        where: {
-          taskId: input.id,
-        },
-        select: {
-          message: true,
-          id: true,
-        },
-      });
-      if (!task) throw new TRPCClientError("No task found");
-      const collaborators = await ctx.db.user.findMany({
-        where: {
-          id: {
-            in: task?.collaboratorIds,
-          },
-        },
-        select: {
-          id: true,
-          image: true,
-          name: true,
-        },
-      });
-      if (task?.assigned_to) {
-        const assignedToUser = await ctx.db.user.findUnique({
+      })
+      taskData.push(
+        ...tasks.map((task) => {
+          return {
+            ...task,
+          }
+        }),
+      )
+      return taskData
+    }),
+
+  getAllStatus: protectedProcedure
+    .input(
+      z.object({
+        workSpaceId: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const projectStatus = await ctx.db.workspace
+        .findUnique({
           where: {
-            id: task?.assigned_to,
+            id: input.workSpaceId,
           },
           select: {
-            id: true,
-            image: true,
+            CustomStatus: true,
+          },
+        })
+        .CustomStatus({
+          select: {
             name: true,
           },
-        });
-        if (!assignedToUser) throw new TRPCClientError("No assignee found!");
+        })
+        .then((status) => {
+          return status?.map((item) => {
+            return {
+              label: item?.name?.replaceAll('_', ' ') ?? '',
+              value: item.name ?? '',
+            }
+          })
+        })
+      return projectStatus
+    }),
+
+  createTask: protectedProcedure
+    .input(createProjectFromValue)
+    .mutation(async ({ ctx, input }) => {
+      const {
+        title,
+        description,
+        dueDate,
+        priority,
+        assigned_to,
+        workSpaceId,
+        parentTaskId,
+        status,
+        collaborators,
+      } = input
+
+      const project = await ctx.db.task.create({
+        data: {
+          title,
+          description,
+          dueDate,
+          priority,
+          workSpaceId,
+          assignedTo: assigned_to,
+          status,
+          collaborators,
+          createdById: ctx.session.user.id,
+          parentTaskId,
+        },
+      })
+
+      if (!project) {
+        throw new TRPCClientError('Failed to create project')
+      }
+
+      return { ...project, tempTaskId: input.tempTaskId }
+    }),
+  getTaskById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (!input.id) {
+        throw new TRPCClientError('Task id is required')
+      }
+
+      const task = await ctx.db.task.findUnique({
+        where: { id: input.id },
+        include: {
+          subTasks: {
+            select: {
+              id: true,
+              title: true,
+              assignedTo: true,
+              status: true,
+              // dependenciesAsDependencyTask: true,
+              // dependenciesAsDependentTask: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+          parentTask: {
+            select: {
+              id: true,
+              title: true,
+              assignedTo: true,
+              status: true,
+
+              // dependenciesAsDependencyTask: true,
+              // dependenciesAsDependentTask: true,
+            },
+          },
+          dependenciesAsDependentTask: {
+            include: { dependencyTask: true },
+          },
+          dependenciesAsDependencyTask: {
+            include: { dependentTask: true },
+          },
+          comments: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+
+          attachments: {
+            select: {
+              id: true,
+              name: true,
+              url: true,
+              type: true,
+            },
+          },
+        },
+      })
+      if (task) {
         return {
           ...task,
-          collaborators: collaborators,
-          comments: comments,
-
-          assigned_to: {
-            id: assignedToUser.id,
-            image: assignedToUser.image,
-            name: assignedToUser.name,
-          },
-        };
+        }
       }
-      return {
-        ...task,
-        collaborators: collaborators,
-        assigned_to: null,
-        comments: comments,
-      };
+      throw new TRPCClientError('Task not found')
+    }),
+  updateTask: protectedProcedure
+    .input(updateProjectValue)
+    .mutation(async ({ ctx, input }) => {
+      const {
+        id,
+        title,
+        description,
+        dueDate,
+        priority,
+        assigned_to,
+        parentTaskId,
+        collaborators,
+        workSpaceId,
+        status,
+      } = input
+
+      const task = await ctx.db.task.update({
+        where: { id },
+        data: {
+          title,
+          description,
+          dueDate,
+          priority,
+          assignedTo: assigned_to,
+          parentTaskId,
+          collaborators,
+          status,
+          workSpaceId,
+        },
+      })
+
+      if (!task) {
+        throw new TRPCClientError('Failed to update task')
+      }
+
+      return 'Task updated successfully'
     }),
 
-  getSingleTaskComments: protectedProcedure
-    .input(z.object({ id: z.string() }))
+  updateFileToProject: protectedProcedure
+    .input(
+      z.object({
+        attachment: z.object({
+          name: z.string(),
+          url: z.string(),
+          type: z.string(),
+        }),
+
+        taskId: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      return await ctx.db.comment.findMany({
-        where: {
-          taskId: input.id,
-        },
-        include: {
-          user: true,
-        },
-      });
-    }),
-  getSingleTaskCollaborators: protectedProcedure
-    .input(z.object({ taskId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      const task = await ctx.db.task.findUnique({
-        where: {
-          id: input.taskId,
-        },
-      });
-      if (!task) throw new TRPCClientError("No task found");
-      const collaborators = await ctx.db.user.findMany({
-        where: {
-          id: {
-            in: task?.collaboratorIds,
-          },
+      const { attachment } = input
+
+      const fileUpload = await ctx.db.fileUpload.create({
+        data: {
+          ...attachment,
+          taskId: input.taskId,
         },
         select: {
           id: true,
-          image: true,
           name: true,
+          url: true,
+          type: true,
         },
-      });
-      return { collaborators: collaborators };
+      })
+
+      if (!fileUpload) {
+        throw new TRPCClientError('Failed to upload file')
+      }
+      return fileUpload
+      // throw new TRPCClientError("No request found with this id.");
     }),
 
   deleteTask: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      await ctx.db.task.delete({
+      const task = await ctx.db.task.delete({
+        where: { id: input.id },
+      })
+
+      if (!task) {
+        throw new TRPCClientError('Failed to delete task')
+      }
+
+      return 'Task deleted successfully'
+    }),
+
+  createCustomStatus: protectedProcedure
+    .input(z.object({ name: z.string(), workSpaceId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { name } = input
+      const customStatus = await ctx.db.customStatus.create({
+        data: {
+          name,
+          WorkSpace: {
+            connect: {
+              id: input.workSpaceId,
+            },
+          },
+        },
+      })
+
+      if (!customStatus) {
+        throw new TRPCClientError('Failed to create custom status')
+      }
+
+      return 'Custom status created successfully'
+    }),
+  deleteCustomStatus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const customStatus = await ctx.db.customStatus.delete({
         where: {
           id: input.id,
         },
-      });
-      return {
-        message: "Task deleted successfully",
-      };
+      })
+
+      if (!customStatus) {
+        throw new TRPCClientError('Failed to delete custom status')
+      }
+
+      return 'Custom status deleted successfully'
     }),
 
-  updateAssignee: protectedProcedure
+  updateCustomStatus: protectedProcedure
+    .input(z.object({ id: z.string(), name: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const customStatus = await ctx.db.customStatus.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          name: input.name.replaceAll(' ', '_'),
+        },
+      })
+
+      if (!customStatus) {
+        throw new TRPCClientError('Failed to update custom status')
+      }
+
+      return 'Custom status updated successfully'
+    }),
+
+  updateStatus: protectedProcedure
     .input(
       z.object({
-        taskId: z.string(),
-        assigned_to: z.string(),
+        status: z.string(),
+        requestId: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      const assignee = await ctx.db.user.findUnique({
+      const status = await ctx.db.task.update({
         where: {
-          id: input.assigned_to,
-        },
-        select: {
-          id: true,
-          image: true,
-          name: true,
-        },
-      });
-      if (!assignee) throw new TRPCClientError("No assignee found");
-      await ctx.db.task.update({
-        where: {
-          id: input.taskId,
+          id: input.requestId,
         },
         data: {
-          assigned_to: input?.assigned_to,
-          initials: assignee.name,
+          status: input.status,
         },
-      });
-      return {
-        message: "Assignee updated successfully",
-      };
+      })
+
+      if (!status) {
+        throw new TRPCClientError('Failed to update status')
+      }
+
+      return 'Status updated successfully'
     }),
-
-  addOrUpdateCollaborators: protectedProcedure
-    .input(
-      z.object({
-        taskId: z.string(),
-
-        collaborators: z.array(z.string()),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      await ctx.db.task.update({
-        where: {
-          id: input.taskId,
-        },
-        data: {
-          collaboratorIds: {
-            set: input.collaborators,
-          },
-        },
-      });
-      return {
-        message: "Collaborators updated successfully",
-      };
-    }),
-
   addComment: protectedProcedure
     .input(
       z.object({
@@ -310,98 +370,23 @@ export const taskRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      const userData = await ctx.db.user.findUnique({
-        where: {
-          id: ctx.session.user.id,
-        },
-        select: {
-          name: true,
-        },
-      });
-      if (userData?.name === null) {
-        throw new TRPCClientError("No user found");
+      if (!ctx.session.user.id) {
+        throw new TRPCClientError('No user found for this session.')
       }
-
-      return await ctx.db.comment.create({
+      const initials = ctx?.session?.user?.email
+      const comment = await ctx.db.comment.create({
         data: {
           message: input.comment,
-          taskId: input.taskId,
           userId: ctx.session.user.id,
+          userInitials: initials,
+          taskId: input.taskId,
         },
-      });
+      })
+
+      if (!comment) {
+        throw new TRPCClientError('Failed to add comment')
+      }
+
+      return comment
     }),
-
-  addDescription: protectedProcedure
-    .input(z.object({ taskId: z.string(), description: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      const task = await ctx.db.task.update({
-        where: {
-          id: input.taskId,
-        },
-        data: {
-          description: input.description,
-        },
-      });
-      return task;
-    }),
-
-  getSingleDescription: protectedProcedure
-    .input(z.object({ taskId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.session.user.id)
-        throw new TRPCClientError("User not found! Please log in.");
-      const task = await ctx.db.task.findUnique({
-        where: {
-          id: input.taskId,
-        },
-        select: {
-          description: true,
-        },
-      });
-      return task;
-    }),
-
-  getAllTaskAssignedToUser: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.session.user.id)
-      throw new TRPCClientError("User not found! Please log in.");
-    const tasks = await ctx.db.task.findMany({
-      where: {
-        assigned_to: ctx.session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    return tasks;
-  }),
-
-  getAllTasks: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.session.user.id)
-      throw new TRPCClientError("User not found! Please log in.");
-    const tasks = await ctx.db.task.findMany({
-      where: {
-        assigned_to: ctx.session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    return tasks;
-  }),
-  getAllTask: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.session.user.id)
-      throw new TRPCClientError("User not found! Please log in.");
-    return await ctx.db.task.findMany({
-      where: {
-        assigned_to: ctx.session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-  }),
-});
+})

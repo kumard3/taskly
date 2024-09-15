@@ -1,62 +1,75 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { type GetServerSidePropsContext } from "next";
+import { PrismaAdapter } from '@auth/prisma-adapter'
+import type { GetServerSidePropsContext } from 'next'
 import {
-  getServerSession,
   type DefaultSession,
+  type DefaultUser,
   type NextAuthOptions,
-} from "next-auth";
-import { type Adapter } from "next-auth/adapters";
-import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
+  getServerSession,
+} from 'next-auth'
+import type { Adapter } from 'next-auth/adapters'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
 
-import bcrypt from "bcryptjs";
-import { env } from "@/env";
-import { db } from "@/server/db";
+import { env } from '@/env'
+import { db } from '@/server/db'
+import bcrypt from 'bcryptjs'
 
-import { OAuth2Client } from "google-auth-library";
-import { z } from "zod";
-import { User } from "@prisma/client";
+import { OAuth2Client } from 'google-auth-library'
+import type { DefaultJWT } from 'next-auth/jwt'
+import { z } from 'zod'
 
-const googleAuthClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+const googleAuthClient = new OAuth2Client(env.GOOGLE_CLIENT_ID)
 
 interface OneTapCredentials {
-  credential: string;
+  credential: string
 }
 
 const loginUserSchema = z.object({
   email: z.string().email(),
   password: z.string(),
   // password: z.string().min(0, "Password should be minimum 5 characters"),
-});
+})
 
-declare module "next-auth" {
+declare module 'next-auth' {
   interface Session extends DefaultSession {
-    user: DefaultSession["user"] & {
-      id: string;
-      // ...other properties
-      // role: UserRole;
-    };
+    user: DefaultSession['user'] & {
+      id: string
+    }
   }
+}
+interface IPJWT extends DefaultJWT {
+  id: string
 }
 
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    session: ({ session, token }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: token.id ?? "",
-        email: token.email ?? "",
-      },
-    }),
-    jwt: async ({ token, account, user }) => {
-      if (account) {
-        token.accessToken = account.access_token;
-        token.id = user.id;
-        token.email = (user as User).email;
-        token.image = user.image;
+    session: async ({ session, token }) => {
+      const userExits = await db.user.findUnique({
+        where: { email: token.email?.toLowerCase() },
+      })
+      if (userExits) {
+        await db.workspace.create({
+          data: {
+            name: 'My workspace',
+            userId: (token as IPJWT).id ?? '',
+          },
+        }) // Create a workspace for the new user
       }
-      return { ...token };
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.id ?? '',
+          email: token.email ?? '',
+        },
+      }
+    },
+    jwt: async ({ token, user }) => {
+      if (user) {
+        token.id = user.id
+        token.email = user.email
+      }
+      return token
     },
   },
   adapter: PrismaAdapter(db) as Adapter,
@@ -66,61 +79,84 @@ export const authOptions: NextAuthOptions = {
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     }),
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "email", type: "text" },
-        password: { label: "password", type: "password" },
+        email: { label: 'email', type: 'text' },
+        password: { label: 'password', type: 'password' },
       },
-      type: "credentials",
+      type: 'credentials',
       authorize: async (credentials) => {
-        const { email, password } = loginUserSchema.parse(credentials);
-        // Fetch the user from the database based on the provided username
+        const { email, password } = loginUserSchema.parse(credentials)
         const user = await db.user.findUnique({
           where: { email: email.toLowerCase() },
           include: {
-            Membership: true,
+            Workspace: true,
           },
-        });
-        if (user && bcrypt?.compareSync(password, user?.password ?? "")) {
-          // Include the desired user properties in the session
-          return Promise.resolve({
+        })
+
+        if (!user) {
+          // New user - handle sign-up
+          const hashedPassword = await bcrypt.hash(password, 10)
+          const newUser = await db.user.create({
+            data: {
+              email: email.toLowerCase(),
+              password: hashedPassword,
+              // Add any other initial user data
+            },
+          })
+
+          await db.workspace.create({
+            data: {
+              name: 'My workspace',
+              userId: newUser.id,
+            },
+          })
+          return {
+            id: newUser.id,
+            email: newUser.email,
+
+            name: newUser.name,
+          }
+        }
+
+        if (user && bcrypt?.compareSync(password, user?.password ?? '')) {
+          return {
             id: user.id,
             email: user.email,
-            workspaceId: user.Membership,
             name: user.name,
-          });
+          }
         } else {
-          return Promise.resolve(null);
+          return null
         }
       },
     }),
     CredentialsProvider({
       // The id of this credential provider. It's important to give an id because, in frontend we don't want to
       // show anything about this provider in a normal login flow
-      id: "googleonetap",
+      id: 'googleonetap',
       // A readable name
-      name: "google-one-tap",
+      name: 'google-one-tap',
 
       // This field define what parameter we expect from the FE and what's its name. In this case "credential"
       // This field will contain the token generated by google
       credentials: {
-        credential: { type: "text" },
+        credential: { type: 'text' },
       },
       // This is where all the logic goes
       authorize: async (credentials) => {
         // The token given by google and provided from the frontend
-        const token = (credentials as unknown as OneTapCredentials).credential;
+        const token = (credentials as unknown as OneTapCredentials).credential
         // We use the google library to exchange the token with some information about the user
         const ticket = await googleAuthClient.verifyIdToken({
           // The token received from the interface
           idToken: token,
           // This is the google ID of your application
           audience: env.GOOGLE_CLIENT_ID,
-        });
-        const payload = ticket.getPayload(); // This is the user
+        })
+        const payload = ticket.getPayload() // This is the user
 
         if (!payload) {
-          throw new Error("Cannot extract payload from signin token");
+          throw new Error('Cannot extract payload from signin token')
         }
 
         // If the request went well, we received all this info from Google.
@@ -131,26 +167,32 @@ export const authOptions: NextAuthOptions = {
           family_name,
           email_verified,
           picture: image,
-        } = payload;
+        } = payload
 
         // If for some reason the email is not provided, we cannot login the user with this method
         if (!email) {
-          throw new Error("Email not available");
+          throw new Error('Email not available')
         }
 
         // Let's check on our DB if the user exists
         const user = await db.user.findUnique({
           where: { email: email?.toLowerCase() },
-        });
+        })
 
         if (!user) {
           const create_user = await db.user.create({
             data: {
               email: email?.toLowerCase(),
-              name: [given_name, family_name].join(" "),
+              name: [given_name, family_name].join(' '),
               image: image,
             },
-          });
+          })
+          await db.workspace.create({
+            data: {
+              name: 'My workspace',
+              userId: create_user.id,
+            },
+          })
           await db.account.create({
             data: {
               user: {
@@ -158,39 +200,39 @@ export const authOptions: NextAuthOptions = {
                   id: create_user.id,
                 },
               },
-              provider: "google",
+              provider: 'google',
               providerAccountId: sub,
               access_token: null,
               refresh_token: null,
               expires_at: null,
 
-              type: "one-tap",
+              type: 'one-tap',
             },
-          });
-          return create_user;
+          })
+          return create_user
           // Include the desired user properties in the session
         }
         return Promise.resolve({
           id: user.id,
           email: user.email,
           image: user.image,
-          name: [given_name, family_name].join(" "),
-        });
+          name: [given_name, family_name].join(' '),
+        })
       },
     }),
   ],
   pages: {
-    signIn: "/auth/login",
+    signIn: '/auth/login',
   },
   session: {
-    strategy: "jwt",
+    strategy: 'jwt',
   },
   secret: env.NEXTAUTH_SECRET,
-};
+}
 
 export const getServerAuthSession = (ctx: {
-  req: GetServerSidePropsContext["req"];
-  res: GetServerSidePropsContext["res"];
+  req: GetServerSidePropsContext['req']
+  res: GetServerSidePropsContext['res']
 }) => {
-  return getServerSession(ctx.req, ctx.res, authOptions);
-};
+  return getServerSession(ctx.req, ctx.res, authOptions)
+}
