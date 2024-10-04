@@ -1,39 +1,71 @@
-import React from "react";
+import type React from "react"
+import { useEffect } from "react"
 
-import { CheckCircle2Icon, type LucideIcon, Home } from "lucide-react";
+import { CheckCircle2Icon, Home, type LucideIcon } from "lucide-react"
 
-import { TbEdit } from "react-icons/tb";
+import { TbEdit } from "react-icons/tb"
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import Link from "next/link";
-import { useSession } from "next-auth/react";
-import { Avatar } from "@mantine/core";
+} from "@/components/ui/tooltip"
+import { useTaskStore } from "@/store/project"
+import { api } from "@/utils/api"
+import { Avatar } from "@mantine/core"
+import { useSession } from "next-auth/react"
+import Link from "next/link"
+import CreateCustomTask from "../task/create"
+import UpdateTaskFrom from "../task/update"
 
 interface NavProps {
-  isCollapsed: boolean;
+  isCollapsed: boolean
   links: {
-    title: string;
-    label?: string;
-    icon: LucideIcon;
-    variant: "default" | "ghost";
-    href?: string;
-  }[];
+    title: string
+    label?: string
+    icon: LucideIcon
+    variant: "default" | "ghost"
+    href?: string
+  }[]
 }
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 export function HybridLayout({ children }: LayoutProps) {
-  const session = useSession();
+  const { setAllTask, setRefetchAllTask, setStatus, setRefetchStatus } =
+    useTaskStore()
+
+  const session = useSession()
+
+  const { data: getAllStatus, refetch: refetchAllStatus } =
+    api.task.getAllStatus.useQuery({})
+  const { data: getAllRequestData, refetch } = api.task.getAllTasks.useQuery(
+    {},
+    {
+      refetchIntervalInBackground: true,
+      refetchInterval: 100000,
+    },
+  )
+
+  useEffect(() => {
+    if (getAllRequestData) {
+      setAllTask(getAllRequestData)
+      setRefetchAllTask(refetch)
+    }
+  }, [getAllRequestData, refetch, setAllTask, setRefetchAllTask])
+
+  useEffect(() => {
+    if (getAllStatus) {
+      setStatus(getAllStatus)
+      setRefetchStatus(refetchAllStatus)
+    }
+  }, [getAllStatus, refetchAllStatus, setRefetchStatus, setStatus])
 
   return (
     <div className="flex h-screen bg-background font-sans text-white">
@@ -91,8 +123,10 @@ export function HybridLayout({ children }: LayoutProps) {
           </main>
         </div>
       </TooltipProvider>
+      <CreateCustomTask />
+      <UpdateTaskFrom />
     </div>
-  );
+  )
 }
 
 export function Nav({ links, isCollapsed }: NavProps) {
@@ -105,7 +139,7 @@ export function Nav({ links, isCollapsed }: NavProps) {
         {links.map((link, index) =>
           isCollapsed ? (
             <Tooltip key={index} delayDuration={0}>
-              <TooltipTrigger asChild>
+              <TooltipTrigger asChild={true}>
                 <Link
                   href={link.href ?? ""}
                   className={cn(
@@ -141,5 +175,5 @@ export function Nav({ links, isCollapsed }: NavProps) {
         )}
       </nav>
     </div>
-  );
+  )
 }

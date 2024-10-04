@@ -1,12 +1,5 @@
-import type { IPAllTaskData, IPAllUserData } from '@/types/projects'
-import { create } from 'zustand'
-
-export const useWorkSpaceStore = create<IPWorkspaceSwitcherProps>((set) => ({
-  data: [],
-  setWorkSpaceData: (data) => set({ data: data }),
-  selectedWorkSpace: undefined,
-  setSelectedWorkSpace: (data) => set({ selectedWorkSpace: data }),
-}))
+import type { IPAllTaskData, IPAllUserData } from "@/types/projects"
+import { create } from "zustand"
 
 export const useTaskStore = create<IPTaskStoreProps>((set) => ({
   allUsers: { data: [], allData: [] },
@@ -68,11 +61,4 @@ interface IPTaskStoreProps {
 type IPData = {
   value: string
   label: string
-}
-
-interface IPWorkspaceSwitcherProps {
-  data: IPData[]
-  setWorkSpaceData: (data: IPData[]) => void
-  selectedWorkSpace?: IPData
-  setSelectedWorkSpace: (data: IPData | undefined) => void
 }

@@ -99,7 +99,7 @@ model Task {
     title         String
     description   String?
     priority      String?
-    dueDate       DateTime?
+    dueDate       String?
     assignedTo    String?
     status        String?
     comments      Comment[]

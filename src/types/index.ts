@@ -1,10 +1,10 @@
-import { Task, Comment } from "@prisma/client";
-import { HTMLAttributes } from "react";
+import type { Comment, Task } from "@prisma/client"
+import type { HTMLAttributes } from "react"
 
 export type StatusSelectType = {
-  value: string;
-  label: string;
-};
+  value: string
+  label: string
+}
 
 export const StatusesSelect: StatusSelectType[] = [
   {
@@ -23,21 +23,21 @@ export const StatusesSelect: StatusSelectType[] = [
     value: "COMPLETED",
     label: "Completed",
   },
-];
+]
 
 export type Status = {
-  label: string;
-  value: string;
-  icon: string | null;
-};
+  label: string
+  value: string
+  icon: string | null
+}
 export type classNameProps = {
-  className?: string;
-} & HTMLAttributes<HTMLDivElement>;
+  className?: string
+} & HTMLAttributes<HTMLDivElement>
 
 // type CombinedType = TypeA & TypeB;
 
 // export type Tasks = Task & Comment;
 
 export interface Tasks extends Task {
-  comment: Comment[];
+  comment: Comment[]
 }
